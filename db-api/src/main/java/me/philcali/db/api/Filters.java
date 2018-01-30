@@ -11,11 +11,39 @@ public final class Filters {
         }
 
         public IFilter equalsTo(final Object value) {
-            return create(attribute, value, Condition.EQUALS);
+            return create(attribute, Condition.EQUALS, value);
+        }
+
+        public IFilter exists() {
+            return create(attribute, Condition.EXISTS);
+        }
+
+        public IFilter notExists() {
+            return create(attribute, Condition.NOT_EXISTS);
+        }
+
+        public IFilter startsWith(final Object value) {
+            return create(attribute, Condition.STARTS_WITH, value);
+        }
+
+        public IFilter contains(final Object value) {
+            return create(attribute, Condition.CONTAINS, value);
+        }
+
+        public IFilter notContains(final Object value) {
+            return create(attribute, Condition.NOT_CONTAINS, value);
+        }
+
+        public IFilter in(final Object...values) {
+            return create(attribute, Condition.IN, values);
+        }
+
+        public IFilter between(final Object value1, final Object value2) {
+            return create(attribute, Condition.BETWEEN, value1, value2);
         }
 
         public IFilter notEqualsTo(final Object value) {
-            return create(attribute, value, Condition.NOT_EQUALS);
+            return create(attribute, Condition.NOT_EQUALS, value);
         }
     }
 
@@ -23,7 +51,7 @@ public final class Filters {
         return new NamedFilter(attribute);
     }
 
-    private static IFilter create(final String attribute, final Object value, final Condition condition) {
+    private static IFilter create(final String attribute, final Condition condition, final Object...values) {
         return new IFilter() {
             @Override
             public String getAttribute() {
@@ -36,8 +64,8 @@ public final class Filters {
             }
 
             @Override
-            public Object getValue() {
-                return value;
+            public Object[] getValues() {
+                return values;
             }
         };
     }

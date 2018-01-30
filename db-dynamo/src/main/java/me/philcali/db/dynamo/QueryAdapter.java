@@ -8,6 +8,7 @@ import java.util.function.Function;
 import com.amazonaws.services.dynamodbv2.document.Index;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.QueryFilter;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
@@ -27,6 +28,7 @@ import me.philcali.db.api.IFilter.Condition;
 public class QueryAdapter implements Function<Table, QueryResult<Item>> {
     public static class Builder {
         private String hashKey;
+        private String rangeKey;
         private QueryParams params;
         private Map<String, Index> indexMap = new HashMap<>();
 
@@ -36,6 +38,10 @@ public class QueryAdapter implements Function<Table, QueryResult<Item>> {
 
         public String getHashKey() {
             return hashKey;
+        }
+
+        public String getRangeKey() {
+            return rangeKey;
         }
 
         public Map<String, Index> getIndexMap() {
@@ -48,6 +54,11 @@ public class QueryAdapter implements Function<Table, QueryResult<Item>> {
 
         public Builder withHashKey(final String hashKey) {
             this.hashKey = hashKey;
+            return this;
+        }
+
+        public Builder withRangeKey(final String rangeKey) {
+            this.rangeKey = rangeKey;
             return this;
         }
 
@@ -72,11 +83,13 @@ public class QueryAdapter implements Function<Table, QueryResult<Item>> {
     }
 
     private final String hashKey;
+    private final String rangeKey;
     private final QueryParams params;
     private final Map<String, Index> indexMap;
 
     private QueryAdapter(final Builder builder) {
         this.hashKey = builder.getHashKey();
+        this.rangeKey = builder.getRangeKey();
         this.params = builder.getQueryParams();
         this.indexMap = builder.getIndexMap();
     }
@@ -90,6 +103,7 @@ public class QueryAdapter implements Function<Table, QueryResult<Item>> {
                     .withMaxPageSize(params.getMaxSize());
             final IFilter key = indexHashKey.orElseGet(() -> params.getFilters().get(hashKey));
             spec.withHashKey(key.getAttribute(), key.getValue());
+            adaptRangeKey(spec);
             buildLastKey().ifPresent(spec::withExclusiveStartKey);
             params.getFilters().values().stream().filter(filter -> !filter.equals(key)).forEach(filter -> {
                 spec.withQueryFilters(translate(new QueryFilter(filter.getAttribute()), filter));
@@ -136,6 +150,12 @@ public class QueryAdapter implements Function<Table, QueryResult<Item>> {
         });
     }
 
+    private void adaptRangeKey(final QuerySpec spec) {
+        Optional.ofNullable(rangeKey)
+              .flatMap(range -> Optional.ofNullable(params.getFilters().get(range)))
+              .ifPresent(rangeFilter -> spec.withRangeKeyCondition(new RangeKeyCondition(rangeFilter.getAttribute())));
+    }
+
     private Optional<IFilter> findExactMatchIndexField() {
         return params.getFilters().entrySet().stream()
                 .filter(entry -> indexMap.containsKey(entry.getKey())
@@ -144,12 +164,54 @@ public class QueryAdapter implements Function<Table, QueryResult<Item>> {
                 .map(entry -> entry.getValue());
     }
 
+    private RangeKeyCondition translateRange(final IFilter apiFilter) {
+        final RangeKeyCondition condition = new RangeKeyCondition(apiFilter.getAttribute());
+        switch (apiFilter.getCondition()) {
+        case EQUALS:
+            return condition.eq(apiFilter.getValue());
+        case GREATER_THAN:
+            return condition.gt(apiFilter.getValue());
+        case LESS_THAN:
+            return condition.lt(apiFilter.getValue());
+        case LESS_THAN_EQUALS:
+            return condition.le(apiFilter.getValue());
+        case GREATER_THAN_EQUALS:
+            return condition.ge(apiFilter.getValue());
+        case STARTS_WITH:
+            return condition.beginsWith(apiFilter.getValue().toString());
+        case BETWEEN:
+            final Object[] values = apiFilter.getValues();
+            return condition.between(values[0], values[1]);
+        default:
+            throw new IllegalArgumentException("Range key condition does not support condition: "
+                  + apiFilter.getCondition());
+        }
+    }
+
     private <T extends Filter<T>> T translate(final Filter<T> newFilter, final IFilter apiFilter) {
         switch (apiFilter.getCondition()) {
         case EQUALS:
             return newFilter.eq(apiFilter.getValue());
-        default:
+        case NOT_EQUALS:
             return newFilter.ne(apiFilter.getValue());
+        case BETWEEN:
+            final Object[] values = apiFilter.getValues();
+            return newFilter.between(values[0], values[1]);
+        case CONTAINS:
+            return newFilter.contains(apiFilter.getValue());
+        case NOT_CONTAINS:
+            return newFilter.notContains(apiFilter.getValue());
+        case EXISTS:
+            return newFilter.exists();
+        case NOT_EXISTS:
+            return newFilter.notExist();
+        case IN:
+            return newFilter.in(apiFilter.getValues());
+        case STARTS_WITH:
+            return newFilter.beginsWith(apiFilter.getValue().toString());
+        default:
+            throw new IllegalArgumentException("Filter condition doesn not support condition: "
+                    + apiFilter.getCondition());
         }
     }
 }
