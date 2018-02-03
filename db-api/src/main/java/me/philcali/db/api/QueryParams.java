@@ -9,14 +9,19 @@ public class QueryParams {
     public static class Builder {
         private int maxSize = DEFAULT_MAX_SIZE;
         private IPageKey token;
-        private Map<String, IFilter> filters = new ConcurrentHashMap<>();
+        private Map<String, ICondition> conditions = new ConcurrentHashMap<>();
+        private Collation collation = Collation.ASCENDING;
 
         public QueryParams build() {
             return new QueryParams(this);
         }
 
-        public Map<String, IFilter> getFilters() {
-            return filters;
+        public Collation getCollation() {
+            return collation;
+        }
+
+        public Map<String, ICondition> getConditions() {
+            return conditions;
         }
 
         public int getMaxSize() {
@@ -27,13 +32,18 @@ public class QueryParams {
             return token;
         }
 
-        public Builder withFilters(final IFilter ... filters) {
-            return withFilters(Arrays.asList(filters));
+        public Builder withCollation(final Collation collation) {
+            this.collation = collation;
+            return this;
         }
 
-        public Builder withFilters(final List<IFilter> filters) {
-            filters.forEach(filter -> {
-                this.filters.put(filter.getAttribute(), filter);
+        public Builder withConditions(final ICondition ... conditions) {
+            return withConditions(Arrays.asList(conditions));
+        }
+
+        public Builder withConditions(final List<ICondition> conditions) {
+            conditions.forEach(condition -> {
+                this.conditions.put(condition.getAttribute(), condition);
             });
             return this;
         }
@@ -49,6 +59,11 @@ public class QueryParams {
         }
     }
 
+    public static enum Collation {
+        ASCENDING,
+        DESCENDING;
+    }
+
     public static final int DEFAULT_MAX_SIZE = 100;
 
     public static Builder builder() {
@@ -57,16 +72,22 @@ public class QueryParams {
 
     private final IPageKey token;
     private final int maxSize;
-    private final Map<String, IFilter> filters;
+    private final Map<String, ICondition> conditions;
+    private final Collation collation;
 
     public QueryParams(final Builder builder) {
-        this.filters = builder.getFilters();
+        this.conditions = builder.getConditions();
         this.maxSize = builder.getMaxSize();
         this.token = builder.getToken();
+        this.collation = builder.getCollation();
     }
 
-    public Map<String, IFilter> getFilters() {
-        return filters;
+    public Collation getCollation() {
+        return collation;
+    }
+
+    public Map<String, ICondition> getConditions() {
+        return conditions;
     }
 
     public int getMaxSize() {

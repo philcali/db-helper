@@ -1,7 +1,7 @@
 package me.philcali.db.api;
 
-public interface IFilter {
-    static enum Condition {
+public interface ICondition {
+    enum Comparator {
         EQUALS,
         NOT_EQUALS,
         STARTS_WITH,
@@ -18,10 +18,12 @@ public interface IFilter {
     }
 
     String getAttribute();
-    Condition getCondition();
-    Object[] getValues();
+
+    Comparator getComparator();
 
     default Object getValue() {
         return getValues()[0];
     }
+
+    Object[] getValues();
 }
