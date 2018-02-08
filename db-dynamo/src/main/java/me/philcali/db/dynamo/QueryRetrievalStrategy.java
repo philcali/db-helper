@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 import com.amazonaws.services.dynamodbv2.document.Index;
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -18,6 +20,8 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.amazonaws.services.dynamodbv2.model.TableDescription;
 
 import me.philcali.db.api.ICondition;
 import me.philcali.db.api.ICondition.Comparator;
@@ -59,8 +63,7 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
         }
 
         public Builder withIndexMap(final String hashKey, final String rangeKey, final Index index) {
-            this.rangeMap.put(rangeKey, hashKey);
-            return withIndexMap(hashKey, index);
+            return withIndexMap(hashKey, index).withRangeMap(rangeKey, hashKey);
         }
 
         public Builder withRangeKey(final String rangeKey) {
@@ -72,6 +75,46 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
             this.rangeMap = rangeMap;
             return this;
         }
+
+        public Builder withRangeMap(final String rangeKey, final String hashKey) {
+            this.rangeMap.put(rangeKey, hashKey);
+            return this;
+        }
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static QueryRetrievalStrategy fromTable(final Table table) {
+        final Builder builder = builder();
+        final TableDescription description = table.getDescription();
+        description.getKeySchema().forEach(key -> {
+            switch (key.getKeyType()) {
+            case "HASH":
+                builder.withHashKey(key.getAttributeName());
+                break;
+            default:
+                builder.withRangeKey(key.getAttributeName());
+            }
+        });
+        final BiConsumer<String, List<KeySchemaElement>> buildIndex = (indexName, keys) -> {
+            final Map<String, String> temp = keys.stream()
+                    .collect(Collectors.toMap(
+                            key -> key.getKeyType(),
+                            key -> key.getAttributeName()));
+            builder.withIndexMap(temp.get("HASH"), table.getIndex(indexName));
+            Optional.ofNullable(temp.get("RANGE")).ifPresent(range -> {
+                builder.withRangeMap(range, temp.get("HASH"));
+            });
+        };
+        description.getGlobalSecondaryIndexes().forEach(index -> {
+            buildIndex.accept(index.getIndexName(), index.getKeySchema());
+        });
+        description.getLocalSecondaryIndexes().forEach(index -> {
+            buildIndex.accept(index.getIndexName(), index.getKeySchema());
+        });
+        return builder.build();
     }
 
     private final String hashKey;

@@ -23,10 +23,10 @@ final class TranslationUtils {
 
     public static StringBuilder translateFilter(final StringBuilder expression, final int index,
             final ValueMap values, final NameMap names, final ICondition apiFilter) {
-        names.put("#n" + index, apiFilter.getAttribute());
+        names.with("#n" + index, apiFilter.getAttribute());
         Optional.ofNullable(apiFilter.getValues()).ifPresent(vs -> {
             for (int i = 0; i < vs.length; i++) {
-                values.put(":v" + index + "_" + i, vs[0]);
+                values.with(":v" + index + "_" + i, vs[0]);
             }
         });
         switch (apiFilter.getComparator()) {
