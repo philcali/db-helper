@@ -26,8 +26,24 @@ public final class Conditions {
             return create(attribute, Comparator.EXISTS);
         }
 
+        public ICondition ge(final Object value) {
+            return create(attribute, Comparator.GREATER_THAN_EQUALS, value);
+        }
+
+        public ICondition gt(final Object value) {
+            return create(attribute, Comparator.GREATER_THAN, value);
+        }
+
         public ICondition in(final Object...values) {
             return create(attribute, Comparator.IN, values);
+        }
+
+        public ICondition le(final Object value) {
+            return create(attribute, Comparator.LESS_THAN_EQUALS, value);
+        }
+
+        public ICondition lt(final Object value) {
+            return create(attribute, Comparator.LESS_THAN, value);
         }
 
         public ICondition notContains(final Object value) {

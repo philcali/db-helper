@@ -5,6 +5,7 @@ import static me.philcali.db.dynamo.TranslationUtils.translateFilter;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,7 +23,7 @@ import me.philcali.db.api.IPageKey;
 import me.philcali.db.api.QueryParams;
 import me.philcali.db.api.QueryResult;
 
-public class ScanRetrievalStrategy implements IRetrievalStrategy {
+public final class ScanRetrievalStrategy implements IRetrievalStrategy {
     @Override
     public QueryResult<Item> apply(final QueryParams params, final Table table) {
         final ScanSpec spec = new ScanSpec()
@@ -50,5 +51,13 @@ public class ScanRetrievalStrategy implements IRetrievalStrategy {
                 .getLastEvaluatedKey())
                 .map(PageKeyDynamo::new);
         return new QueryResult<>(pageKey, items, items.size() == params.getMaxSize());
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (Objects.isNull(obj) || !(obj instanceof ScanRetrievalStrategy)) {
+            return false;
+        }
+        return obj instanceof ScanRetrievalStrategy;
     }
 }

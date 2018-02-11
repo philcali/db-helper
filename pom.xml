@@ -1,5 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>me.philcali</groupId>
@@ -13,6 +13,7 @@
   <modules>
     <module>db-api</module>
     <module>db-dynamo</module>
+    <module>db-dynamo-local</module>
   </modules>
 
   <properties>
@@ -20,6 +21,14 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
+  
+  <repositories>
+  	<repository>
+  		<id>dynamo-local-oregon</id>
+  		<name>DynamoDB local release repository</name>
+  		<url>https://s3-us-west-2.amazonaws.com/dynamodb-local/release</url>
+  	</repository>
+  </repositories>
   
   <dependencyManagement>
   	<dependencies>
@@ -29,6 +38,11 @@
   			<version>1.11.268</version>
   			<type>pom</type>
   			<scope>import</scope>
+  		</dependency>
+  		<dependency>
+  			<groupId>com.amazonaws</groupId>
+  			<artifactId>DynamoDBLocal</artifactId>
+  			<version>[1.11,2.0)</version>
   		</dependency>
   	</dependencies>
   </dependencyManagement>

@@ -1,5 +1,6 @@
 package me.philcali.db.dynamo;
 
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.StringJoiner;
 
@@ -23,7 +24,13 @@ final class TranslationUtils {
 
     public static StringBuilder translateFilter(final StringBuilder expression, final int index,
             final ValueMap values, final NameMap names, final ICondition apiFilter) {
-        names.with("#n" + index, apiFilter.getAttribute());
+        final StringJoiner attributeNameParts = new StringJoiner(".");
+        Arrays.stream(apiFilter.getAttribute().split("\\.")).forEach(part -> {
+            final String namePart = "#" + part + index;
+            names.with(namePart, part);
+            attributeNameParts.add(namePart);
+        });
+        final String attributeName = attributeNameParts.toString();
         Optional.ofNullable(apiFilter.getValues()).ifPresent(vs -> {
             for (int i = 0; i < vs.length; i++) {
                 values.with(":v" + index + "_" + i, vs[0]);
@@ -31,35 +38,35 @@ final class TranslationUtils {
         });
         switch (apiFilter.getComparator()) {
         case EQUALS:
-            return expression.append(String.format("#n%d = :v%d_0", index, index));
+            return expression.append(String.format("%s = :v%d_0", attributeName, index));
         case NOT_EQUALS:
-            return expression.append(String.format("#n%d <> :v%d_0", index, index));
+            return expression.append(String.format("%s <> :v%d_0", attributeName, index));
         case LESS_THAN:
-            return expression.append(String.format("#n%d < :v%d_0", index, index));
+            return expression.append(String.format("%s < :v%d_0", attributeName, index));
         case LESS_THAN_EQUALS:
-            return expression.append(String.format("#n%d <= :v%d_0", index, index));
+            return expression.append(String.format("%s <= :v%d_0", attributeName, index));
         case GREATER_THAN:
-            return expression.append(String.format("#n%d > :v%d_0", index, index));
+            return expression.append(String.format("%s > :v%d_0", attributeName, index));
         case GREATER_THAN_EQUALS:
-            return expression.append(String.format("#n%d >= :v%d_0", index, index));
+            return expression.append(String.format("%s >= :v%d_0", attributeName, index));
         case BETWEEN:
-            return expression.append(String.format("#n%d BETWEEN :v%d_0 AND :v%d_1", index, index, index));
+            return expression.append(String.format("%s BETWEEN :v%d_0 AND :v%d_1", attributeName, index, index));
         case CONTAINS:
-            return expression.append(String.format("contains(#n%d, :v%d_0)", index, index));
+            return expression.append(String.format("contains(%s, :v%d_0)", attributeName, index));
         case NOT_CONTAINS:
-            return expression.append(String.format("NOT contains(#n%d, :v%d_0)", index, index));
+            return expression.append(String.format("NOT contains(%s, :v%d_0)", attributeName, index));
         case EXISTS:
-            return expression.append(String.format("attribute_exists(#n%d)", index));
+            return expression.append(String.format("attribute_exists(%s)", attributeName));
         case NOT_EXISTS:
-            return expression.append(String.format("attribute_not_exists(#n%d)", index));
+            return expression.append(String.format("attribute_not_exists(%s)", attributeName));
         case IN:
             final StringJoiner joiner = new StringJoiner(", ");
             values.keySet().stream()
                     .filter(key -> key.startsWith(":v" + index + "_"))
                     .forEach(joiner::add);
-            return expression.append(String.format("#n%d IN (%s)", index, joiner.toString()));
+            return expression.append(String.format("%s IN (%s)", attributeName, joiner.toString()));
         case STARTS_WITH:
-            return expression.append(String.format("begins_with(#n%d, :v%d_0)", index, index));
+            return expression.append(String.format("begins_with(%s, :v%d_0)", attributeName, index));
         default:
             throw new IllegalArgumentException("Filter condition does not support condition: "
                     + apiFilter.getComparator());

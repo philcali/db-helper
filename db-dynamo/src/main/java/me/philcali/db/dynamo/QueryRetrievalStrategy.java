@@ -6,6 +6,7 @@ import static me.philcali.db.dynamo.TranslationUtils.translateFilter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -88,7 +89,8 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
 
     public static QueryRetrievalStrategy fromTable(final Table table) {
         final Builder builder = builder();
-        final TableDescription description = table.getDescription();
+        final TableDescription description = Optional.ofNullable(table.getDescription())
+                .orElseGet(table::describe);
         description.getKeySchema().forEach(key -> {
             switch (key.getKeyType()) {
             case "HASH":
@@ -108,12 +110,12 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
                 builder.withRangeMap(range, temp.get("HASH"));
             });
         };
-        description.getGlobalSecondaryIndexes().forEach(index -> {
+        Optional.ofNullable(description.getGlobalSecondaryIndexes()).ifPresent(is -> is.forEach(index -> {
             buildIndex.accept(index.getIndexName(), index.getKeySchema());
-        });
-        description.getLocalSecondaryIndexes().forEach(index -> {
+        }));
+        Optional.ofNullable(description.getLocalSecondaryIndexes()).ifPresent(is -> is.forEach(index -> {
             buildIndex.accept(index.getIndexName(), index.getKeySchema());
-        });
+        }));
         return builder.build();
     }
 
@@ -181,11 +183,35 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
         }
     }
 
+    private Optional<Map<String, String>> convertIndexMapToString(final Map<String, Index> indexes) {
+        return Optional.ofNullable(indexes).map(index -> index.entrySet().stream().collect(Collectors.toMap(
+                entry -> entry.getKey(),
+                entry -> entry.getValue().getIndexName())));
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (Objects.isNull(obj) || !(obj instanceof QueryRetrievalStrategy)) {
+            return false;
+        }
+        final QueryRetrievalStrategy query = (QueryRetrievalStrategy) obj;
+        return Objects.equals(fallback, query.fallback)
+                && Objects.equals(hashKey, query.hashKey)
+                && Objects.equals(convertIndexMapToString(indexMap), convertIndexMapToString(query.indexMap))
+                && Objects.equals(rangeKey, query.rangeKey)
+                && Objects.equals(rangeMap, query.rangeMap);
+    }
+
     private Optional<ICondition> findExactMatchIndexField(final QueryParams params, final Map<String, Index> indexMap) {
         return params.getConditions().entrySet().stream()
                 .filter(entry -> indexMap.containsKey(entry.getKey())
                         && entry.getValue().getComparator() == Comparator.EQUALS)
                 .findFirst()
                 .map(entry -> entry.getValue());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(fallback, hashKey, rangeKey, indexMap, rangeMap);
     }
 }
