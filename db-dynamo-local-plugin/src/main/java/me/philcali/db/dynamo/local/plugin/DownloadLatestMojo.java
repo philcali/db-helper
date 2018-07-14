@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileTime;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -48,7 +49,7 @@ public class DownloadLatestMojo extends AbstractLocalParametersMojo {
             final IRequest request = client.createRequest(HttpMethod.GET, getArchiveURL().toString());
             final IResponse response = request.respond();
             try {
-                Files.copy(response.body(), localArchive);
+                Files.copy(response.body(), localArchive, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException ie) {
                 throw new MojoExecutionException("Failed to copy archive: " + localArchive);
             }
