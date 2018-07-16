@@ -64,7 +64,7 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
         }
 
         public Builder withIndexMap(final String hashKey, final String rangeKey, final Index index) {
-            return withIndexMap(hashKey, index).withRangeMap(rangeKey, hashKey);
+            return withIndexMap(hashKey, index).withRangeMap(index.getIndexName(), rangeKey);
         }
 
         public Builder withRangeKey(final String rangeKey) {
@@ -77,8 +77,8 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
             return this;
         }
 
-        public Builder withRangeMap(final String rangeKey, final String hashKey) {
-            this.rangeMap.put(rangeKey, hashKey);
+        public Builder withRangeMap(final String indexName, final String rangeKey) {
+            this.rangeMap.put(indexName, rangeKey);
             return this;
         }
     }
@@ -107,7 +107,7 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
                             key -> key.getAttributeName()));
             builder.withIndexMap(temp.get("HASH"), table.getIndex(indexName));
             Optional.ofNullable(temp.get("RANGE")).ifPresent(range -> {
-                builder.withRangeMap(range, temp.get("HASH"));
+                builder.withRangeMap(indexName, range);
             });
         };
         Optional.ofNullable(description.getGlobalSecondaryIndexes()).ifPresent(is -> is.forEach(index -> {
@@ -145,7 +145,7 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
             final QuerySpec spec = new QuerySpec()
                     .withMaxPageSize(params.getMaxSize());
             final Optional<String> rangeField = indexHashKey
-                    .map(indexHash -> Optional.ofNullable(rangeMap.get(indexHash.getAttribute())))
+                    .map(indexHash -> Optional.ofNullable(rangeMap.get(indexMap.get(indexHash.getAttribute()).getIndexName())))
                     .orElseGet(() -> Optional.ofNullable(rangeKey));
             final Optional<ICondition> range = rangeField
                     .flatMap(r -> Optional.ofNullable(params.getConditions().get(r)));
