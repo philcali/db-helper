@@ -15,6 +15,7 @@
     <module>db-dynamo</module>
     <module>db-dynamo-local</module>
     <module>db-dynamo-local-plugin</module>
+    <module>db-s3</module>
   </modules>
 
   <properties>
