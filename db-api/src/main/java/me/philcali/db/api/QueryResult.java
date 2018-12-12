@@ -1,16 +1,15 @@
 package me.philcali.db.api;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class QueryResult<T> {
-    private final Optional<IPageKey> token;
+    private final IPageKey token;
     private final List<T> items;
     private final boolean truncated;
 
-    public QueryResult(final Optional<IPageKey> token, final List<T> items, final boolean truncated) {
+    public QueryResult(final IPageKey token, final List<T> items, final boolean truncated) {
         this.token = token;
         this.items = items;
         this.truncated = truncated;
@@ -20,7 +19,7 @@ public class QueryResult<T> {
         return items;
     }
 
-    public Optional<IPageKey> getToken() {
+    public IPageKey getToken() {
         return token;
     }
 

@@ -177,7 +177,7 @@ public class QueryRetrievalStrategy implements IRetrievalStrategy {
                     .getQueryResult()
                     .getLastEvaluatedKey())
                     .map(PageKeyDynamo::new);
-            return new QueryResult<>(lastKey, items, items.size() == params.getMaxSize());
+            return new QueryResult<>(lastKey.orElse(null), items, items.size() == params.getMaxSize());
         } else {
             return fallback.apply(params, table);
         }

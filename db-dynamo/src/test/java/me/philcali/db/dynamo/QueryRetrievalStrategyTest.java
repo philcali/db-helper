@@ -2,7 +2,7 @@ package me.philcali.db.dynamo;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -82,6 +82,6 @@ public class QueryRetrievalStrategyTest {
                 .build();
         QueryResult<Item> results = query.apply(params, table);
         assertEquals(1, results.getItems().size());
-        assertTrue(results.getToken().isPresent());
+        assertNotNull(results.getToken());
     }
 }

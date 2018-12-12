@@ -16,7 +16,7 @@ public class QueryResultTest {
     @Before
     public void setUp() {
         final List<Integer> ints = Arrays.asList(10, 20, 30, 40, 50);
-        results = new QueryResult<>(Optional.empty(), ints, true);
+        results = new QueryResult<>(null, ints, true);
     }
 
     @Test

@@ -15,6 +15,10 @@ public class PageKey implements IPageKey {
         return this;
     }
 
+    public void setKey(final Map<String, Object> key) {
+        this.compositeKey.putAll(key);
+    }
+
     @Override
     public Map<String, Object> getKey() {
         return compositeKey;

@@ -72,6 +72,6 @@ public class QueryRetrievalStrategy implements BiFunction<QueryParams, AmazonS3,
         final ListObjectsV2Result result = s3.listObjectsV2(request);
         final Optional<IPageKey> token = Optional.ofNullable(result.getContinuationToken())
                 .map(continuation -> new PageKey().addKey(NEXT_TOKEN, continuation.toString()));
-        return new QueryResult<>(token, result.getObjectSummaries(), result.isTruncated());
+        return new QueryResult<>(token.orElse(null), result.getObjectSummaries(), result.isTruncated());
     }
 }

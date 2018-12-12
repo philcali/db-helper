@@ -50,7 +50,7 @@ public final class ScanRetrievalStrategy implements IRetrievalStrategy {
                 .getScanResult()
                 .getLastEvaluatedKey())
                 .map(PageKeyDynamo::new);
-        return new QueryResult<>(pageKey, items, items.size() == params.getMaxSize());
+        return new QueryResult<>(pageKey.orElse(null), items, items.size() == params.getMaxSize());
     }
 
     @Override
