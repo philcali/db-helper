@@ -26,7 +26,7 @@ public class QueryResultTest {
 
     @Test
     public void testToken() {
-        assertEquals(Optional.empty(), results.getToken());
+        assertEquals(null, results.getToken());
     }
 
     @Test
