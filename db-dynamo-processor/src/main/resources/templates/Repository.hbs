@@ -1,0 +1,258 @@
+package {{packageName}};
+
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.attribute_exists;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.attribute_not_exists;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.S;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.SS;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.N;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.NS;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.L;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.M;
+import static com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder.BOOL;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+
+import com.amazonaws.SdkBaseException;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
+import com.amazonaws.services.dynamodbv2.document.spec.DeleteItemSpec;
+import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
+import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
+import com.amazonaws.services.dynamodbv2.model.ReturnValue;
+import com.amazonaws.services.dynamodbv2.xspec.Condition;
+import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
+import com.amazonaws.services.dynamodbv2.xspec.SetAction;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import me.philcali.db.api.QueryParams;
+import me.philcali.db.api.QueryResult;
+import me.philcali.db.dynamo.IRetrievalStrategy;
+import me.philcali.db.dynamo.QueryRetrievalStrategy;
+
+public {{#abstract}}abstract {{/abstract}}class {{simpleName}} implements {{elementName}} {
+    private final String tableName;
+    private final DynamoDB db;
+    private final ObjectMapper mapper;
+{{#list}}    private final IRetrievalStrategy query;{{/list}}
+
+    public {{simpleName}}(final String tableName, final DynamoDB db, final ObjectMapper mapper) {
+        this.tableName = tableName;
+        this.db = db;
+        this.mapper = mapper;
+{{#list}}        this.query = QueryRetrievalStrategy.fromTable(db.getTable(tableName));{{/list}}
+    }
+
+    public {{simpleName}}(final String tableName, final DynamoDB db) {
+        this(tableName, db, new ObjectMapper());
+    }
+
+    protected <T> T fromJson(final String json, final Class<T> targetClass) {
+        try {
+            return mapper.readValue(json, targetClass);
+        } catch (IOException ie) {
+            throw new RuntimeException("Failed to parse into " + targetClass.getSimpleName(), ie);
+        }
+    }
+
+    protected <T> T fromItem(final Item item, final Class<T> targetClass) {
+        return fromJson(item.toJSON(), targetClass);
+    }
+
+    protected String toJson(final Object thing) {
+        try {
+            return mapper.writeValueAsString(thing);
+        } catch (IOException ie) {
+            throw new RuntimeException("Failed to serialize " + thing.getClass().getSimpleName(), ie);
+        }
+    }
+
+    protected Item toItem(final Object thing) {
+        return Item.fromJSON(toJson(thing));
+    }
+
+    protected JsonNode toJsonNode(final Object thing) {
+        try {
+            return mapper.readTree(toJson(thing));
+        } catch (IOException ie) {
+            throw new RuntimeException("Failed to restore " + thing.getClass().getSimpleName(), ie);
+        }
+    }
+
+{{#read}}
+    @Override
+    public Optional<{{type}}> {{method}}(
+{{#parameters}}
+        {{#unless @first}}, {{/unless}}final {{inputType}} {{name}}{{/parameters}}) {
+        try {
+            final Item item = db.getTable(tableName).getItem(new PrimaryKey()
+                    {{#parameters}}.addComponent("{{name}}", {{name}}){{/parameters}});
+            return Optional.ofNullable(item).map(i -> fromItem(i, {{type}}.class));
+{{#exceptions}}
+        } catch ({{#source}}{{.}}{{#unless @last}} | {{/unless}}{{/source}} e) {
+            throw new {{destination}}(String.format("{{message}}", "{{method}}", {{type}}.class), e);
+{{/exceptions}}
+        }
+    }
+{{/read}}
+
+{{#list}}
+    @Override
+    public QueryResult<{{type}}> {{method}}(final QueryParams params) {
+        final Function<Item, {{type}}> thunk = item -> fromItem(item, {{type}}.class);
+        try {
+            return query.andThen(result -> result.map(thunk)).apply(params, db.getTable(tableName));
+{{#exceptions}}
+        } catch ({{#source}}{{.}}{{#unless @last}} | {{/unless}}{{/source}} e) {
+            throw new {{destination}}(String.format("{{message}}", "{{method}}", {{type}}.class), e);
+{{/exceptions}}
+        }
+    }
+{{/list}}
+{{#create}}
+    /**
+     * Internal helper method to create a dynamo spec that ensures existing entities
+     * are not overwritten. The key values are pulled from a the Repository annotation
+     * value or from the {{type}} if a method is annotated.
+     */
+    protected ExpressionSpecBuilder prepareCreateSpec(final Item partial) {
+        final ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+        builder.withCondition(
+                {{#keys}}{{#unless @first}}.and({{/unless}}attribute_not_exists("{{name}}"){{#unless @first}}){{/unless}}{{/keys}});
+        return builder;
+    }
+
+    protected Item prepareItemForCreate(final {{type}} partial) {
+        return toItem(partial);
+    }
+
+    /**
+     * Internal helper method to prepare the put item spec for create calls. This method
+     * prepares an ExpressionSpecBuilder targeted at creating new entities.
+     */
+    protected PutItemSpec prepareCreate(final Item partial) {
+        return new PutItemSpec()
+                .withItem(partial)
+                .withExpressionSpec(prepareCreateSpec(partial).buildForPut());
+    }
+
+    @Override
+    public {{type}} {{method}}(final {{type}} partial) {
+        try {
+            final Item createItem = prepareItemForCreate(partial);
+            db.getTable(tableName).putItem(prepareCreate(createItem));
+            return fromItem(createItem, {{type}}.class);
+{{#exceptions}}
+        } catch ({{#source}}{{.}}{{#unless @last}} | {{/unless}}{{/source}} e) {
+            throw new {{destination}}(String.format("{{message}}", "{{method}}", partial), e);
+{{/exceptions}}
+        }
+    }
+{{/create}}
+{{#update}}
+    protected void applyUpdate(final String key, final JsonNode value, final ExpressionSpecBuilder builder) {
+        if (value.isTextual()) {
+            builder.addUpdate(S(key).set(value.asText()));
+        } else if (value.isBoolean()) {
+            builder.addUpdate(BOOL(key).set(value.asBoolean()));
+        } else if (value.isNumber()) {
+            builder.addUpdate(N(key).set(value.numberValue()));
+        } else if (value.isArray()) {
+            builder.addUpdate(L(key).set(fromJson(toJson(value), ArrayList.class)));
+        } else if (value.isObject() || value.isPojo()) {
+            builder.addUpdate(M(key).set(fromJson(toJson(value), HashMap.class)));
+        }
+    }
+
+    protected ExpressionSpecBuilder prepareUpdateSpec(final JsonNode partial) {
+        final ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+        final List<String> keyNames = Arrays.asList({{#keys}}{{#unless @first}} ,{{/unless}}"{{name}}"{{/keys}});
+        partial.fields().forEachRemaining(entry -> {
+            if (!keyNames.stream().anyMatch(entry.getKey()::equals)) {
+                applyUpdate(entry.getKey(), entry.getValue(), builder);
+            }
+        });
+        keyNames.stream()
+                .map(ExpressionSpecBuilder::attribute_exists)
+                .map(condition -> (Condition) condition)
+                .reduce((left, right) -> left.and(right))
+                .ifPresent(builder::withCondition);
+        return builder;
+    }
+
+    protected UpdateItemSpec prepareUpdate(final {{type}} partial) {
+        final JsonNode partialUpdate = toJsonNode(partial);
+        return new UpdateItemSpec()
+                .withPrimaryKey(new PrimaryKey()
+                        {{#keys}}.addComponent("{{name}}", partialUpdate.get("{{name}}").asText()){{/keys}})
+                .withExpressionSpec(prepareUpdateSpec(partialUpdate).buildForUpdate())
+                .withReturnValues(ReturnValue.ALL_NEW);
+    }
+
+    @Override
+    public {{type}} {{method}}(final {{type}} partial) {
+        final ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+        try {
+            final Item updatedItem = db.getTable(tableName).updateItem(prepareUpdate(partial)).getItem();
+            return fromItem(updatedItem, {{type}}.class);
+{{#exceptions}}
+        } catch ({{#source}}{{.}}{{#unless @last}} | {{/unless}}{{/source}} e) {
+            throw new {{destination}}(String.format("{{message}}", "{{method}}", partial), e);
+{{/exceptions}}
+        }
+    }
+{{/update}}
+{{#put}}
+    /**
+     * Prepares a PutItemSpec that replaces the current value
+     */
+    protected PutItemSpec preparePut(final {{type}} replacement) {
+        return new PutItemSpec()
+                .withItem(toItem(replacement))
+                .withReturnValues(ReturnValue.ALL_NEW);
+    }
+
+    @Override
+    public {{type}} {{method}}(final {{type}} replacement) {
+        try {
+            final Item replacedItem = db.getTable(tableName).putItem(preparePut(replacement)).getItem();
+            return fromItem(replacedItem, {{type}}.class);
+{{#exceptions}}
+        } catch ({{#source}}{{.}}{{#unless @last}} | {{/unless}}{{/source}} e) {
+            throw new {{destination}}(String.format("{{message}}", "{{method}}", replacement), e);
+{{/exceptions}}
+        }
+    }
+{{/put}}
+{{#delete}}
+    protected DeleteItemSpec prepareDelete(
+{{#parameters}}
+        {{#unless @first}}, {{/unless}}final {{inputType}} {{name}}{{/parameters}}) {
+        return new DeleteItemSpec()
+                .withPrimaryKey(new PrimaryKey()
+                        {{#parameters}}.addComponent("{{name}}", {{name}}){{/parameters}});
+    }
+
+    @Override
+    public void {{method}}(
+{{#parameters}}
+        {{#unless @first}}, {{/unless}}final {{inputType}} {{name}}{{/parameters}}) {
+        try {
+            db.getTable(tableName).deleteItem(prepareDelete(
+                    {{#parameters}}{{#unless @first}}, {{/unless}}{{name}}{{/parameters}}));
+{{#exceptions}}
+        } catch ({{#source}}{{.}}{{#unless @last}} | {{/unless}}{{/source}} e) {
+            throw new {{destination}}(String.format("{{message}}", "{{method}}", ""), e);
+{{/exceptions}}
+        }
+    }
+{{/delete}}
+}

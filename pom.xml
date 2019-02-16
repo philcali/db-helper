@@ -16,6 +16,10 @@
     <module>db-dynamo-local</module>
     <module>db-dynamo-local-plugin</module>
     <module>db-s3</module>
+    <module>db-annotation</module>
+    <module>db-processor</module>
+    <module>db-processor-example</module>
+    <module>db-dynamo-processor</module>
   </modules>
 
   <properties>
@@ -30,6 +34,11 @@
   		<name>DynamoDB local release repository</name>
   		<url>https://s3-us-west-2.amazonaws.com/dynamodb-local/release</url>
   	</repository>
+	<repository>
+		<id>me.philcali.maven</id>
+		<name>Philcali Maven Repo</name>
+		<url>http://philcali.me/projects</url>
+    </repository>
   </repositories>
   
   <dependencyManagement>
@@ -37,7 +46,7 @@
   		<dependency>
   			<groupId>com.amazonaws</groupId>
   			<artifactId>aws-java-sdk-bom</artifactId>
-  			<version>1.11.268</version>
+  			<version>1.11.500</version>
   			<type>pom</type>
   			<scope>import</scope>
   		</dependency>

@@ -7,12 +7,13 @@
     <artifactId>db</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
-  <artifactId>db-dynamo</artifactId>
-  <name>db-dynamo</name>
+  <artifactId>db-processor-example</artifactId>
+  <name>db-processor-example</name>
   <url>http://maven.apache.org</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+
   <build>
   <pluginManagement>
     <plugins>
@@ -44,33 +45,45 @@
   		</plugin>
   	</plugins>
   </build>
+
   <dependencies>
-  	<dependency>
-  		<groupId>${project.parent.groupId}</groupId>
-  		<artifactId>db-api</artifactId>
-  		<version>${project.parent.version}</version>
-  	</dependency>
     <dependency>
-  		<groupId>junit</groupId>
-  		<artifactId>junit</artifactId>
-  		<version>4.12</version>
-  		<scope>test</scope>
-  	</dependency>
+      <groupId>me.philcali.zero</groupId>
+      <artifactId>lombok-example</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.parent.groupId}</groupId>
+      <artifactId>db-api</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.parent.groupId}</groupId>
+      <artifactId>db-annotation</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.parent.groupId}</groupId>
+      <artifactId>db-dynamo</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
   	<dependency>
   		<groupId>${project.parent.groupId}</groupId>
   		<artifactId>db-dynamo-local</artifactId>
   		<version>${project.parent.version}</version>
   		<scope>test</scope>
   	</dependency>
-  	<dependency>
-  		<groupId>org.mockito</groupId>
-  		<artifactId>mockito-core</artifactId>
-  		<version>1.10.19</version>
-  		<scope>test</scope>
-  	</dependency>
-  	<dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-dynamodb</artifactId>
+    <dependency>
+      <groupId>${project.parent.groupId}</groupId>
+      <artifactId>db-dynamo-processor</artifactId>
+      <version>${project.parent.version}</version>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 </project>
